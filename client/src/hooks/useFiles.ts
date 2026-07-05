@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   listFiles,
   uploadFile,
@@ -7,6 +7,7 @@ import {
   renameEntry,
   downloadFile,
   acquireLock,
+  searchFiles,
   type DirItem,
 } from "../lib/api";
 
@@ -16,6 +17,14 @@ export function useFiles(initialPath = "/") {
   const [items, setItems] = useState<DirItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 排序与搜索状态
+  const [sortField, setSortField] = useState<"name" | "size" | "modified_at">("name");
+  const [sortAsc, setSortAsc] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // 加载目录内容
   const load = useCallback(async (path?: string) => {
@@ -33,6 +42,62 @@ export function useFiles(initialPath = "/") {
     }
   }, [currentPath]);
 
+  // 排序后的列表（目录始终在文件之前，组内按指定字段排序）
+  const sortedItems = useMemo(() => {
+    const dirs = items.filter((i) => i.item_type === "directory");
+    const files = items.filter((i) => i.item_type === "file");
+
+    const sortFn = (a: DirItem, b: DirItem) => {
+      let cmp = 0;
+      if (sortField === "name") {
+        cmp = a.name.localeCompare(b.name);
+      } else if (sortField === "size") {
+        cmp = a.size - b.size;
+      } else {
+        cmp = new Date(a.modified_at).getTime() - new Date(b.modified_at).getTime();
+      }
+      return sortAsc ? cmp : -cmp;
+    };
+
+    return [...dirs.sort(sortFn), ...files.sort(sortFn)];
+  }, [items, sortField, sortAsc]);
+
+  // 切换排序字段/方向
+  const toggleSort = useCallback((field: "name" | "size" | "modified_at") => {
+    if (sortField === field) {
+      setSortAsc((prev) => !prev);
+    } else {
+      setSortField(field);
+      setSortAsc(true);
+    }
+  }, [sortField]);
+
+  // 防抖搜索
+  const searchTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setIsSearching(false);
+      load(); // 恢复正常目录列表
+      return;
+    }
+
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = window.setTimeout(async () => {
+      setIsSearching(true);
+      setLoading(true);
+      setError(null);
+      try {
+        const resp = await searchFiles(searchQuery);
+        setItems(resp.items);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "搜索失败");
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }, [searchQuery]);
+
   // 导航到子目录
   const navigate = useCallback((dirName: string) => {
     const newPath = currentPath === "/" ? `/${dirName}` : `${currentPath}/${dirName}`;
@@ -46,11 +111,26 @@ export function useFiles(initialPath = "/") {
     load(parent);
   }, [currentPath, load]);
 
-  // 上传文件
+  // 上传文件（带模拟进度）
   const upload = useCallback(async (file: File) => {
     const filePath = currentPath === "/" ? `/${file.name}` : `${currentPath}/${file.name}`;
-    await uploadFile(filePath, file);
-    await load();
+    setUploadingFiles([file.name]);
+    setUploadProgress(0);
+    try {
+      // 模拟进度：0% → 50% → 实际上传 → 100%
+      setUploadProgress(0);
+      await new Promise((r) => setTimeout(r, 200));
+      setUploadProgress(50);
+      await uploadFile(filePath, file);
+      setUploadProgress(100);
+      await load();
+    } finally {
+      // 上传完成后清理状态
+      setTimeout(() => {
+        setUploadingFiles([]);
+        setUploadProgress(0);
+      }, 500);
+    }
   }, [currentPath, load]);
 
   // 新建目录
@@ -111,6 +191,11 @@ export function useFiles(initialPath = "/") {
     }
   }, [currentPath]);
 
+  // 导航到绝对路径
+  const navigateTo = useCallback((path: string) => {
+    load(path);
+  }, [load]);
+
   // 初始加载
   useEffect(() => {
     load("/");
@@ -119,10 +204,12 @@ export function useFiles(initialPath = "/") {
   return {
     currentPath,
     items,
+    sortedItems,
     loading,
     error,
     load,
     navigate,
+    navigateTo,
     goUp,
     upload,
     createDir,
@@ -131,5 +218,13 @@ export function useFiles(initialPath = "/") {
     rename,
     download,
     edit,
+    sortField,
+    sortAsc,
+    toggleSort,
+    searchQuery,
+    setSearchQuery,
+    isSearching,
+    uploadingFiles,
+    uploadProgress,
   };
 }
