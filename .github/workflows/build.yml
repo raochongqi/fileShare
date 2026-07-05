@@ -34,7 +34,9 @@ jobs:
           rm -rf /var/lib/apt/lists/*
 
       - name: Install Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
         shell: bash
 
       - name: Cache cargo
@@ -56,9 +58,7 @@ jobs:
           restore-keys: npm-
 
       - name: Build server
-        run: |
-          source ~/.cargo/env
-          cd server && cargo build --release
+        run: cd server && cargo build --release
         shell: bash
 
       - name: Install frontend dependencies
