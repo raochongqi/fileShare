@@ -4,6 +4,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use fileshare_client::{extract_file_name, download_file_to, watch_and_upload_on_close, ClientConfig, OpenFileParams, OpenFileResult, WatchContext};
+use tauri::Manager;
 
 #[tauri::command]
 async fn open_file_for_edit(
