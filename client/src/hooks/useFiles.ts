@@ -6,7 +6,6 @@ import {
   deleteEntry,
   renameEntry,
   downloadFile,
-  acquireLock,
   searchFiles,
   type DirItem,
 } from "../lib/api";
@@ -173,18 +172,16 @@ export function useFiles(initialPath = "/") {
     URL.revokeObjectURL(blobUrl);
   }, [currentPath]);
 
-  // 编辑文件（申请写锁 → 下载 → 打开）
-  const edit = useCallback(async (name: string) => {
+  // 编辑文件（调用方需提前获取写锁，传入 lockToken/leaseUntil）
+  const edit = useCallback(async (name: string, lockToken: string, leaseUntil: number) => {
     const filePath = currentPath === "/" ? `/${name}` : `${currentPath}/${name}`;
     try {
-      const lockResp = await acquireLock(filePath, "write");
       // 下载到临时目录 + 用系统默认程序打开，由 Tauri Rust 侧处理
-      // MVP: 通过 Tauri invoke 调用
       const { invoke } = await import("@tauri-apps/api/tauri");
       await invoke("open_file_for_edit", {
         path: filePath,
-        lockToken: lockResp.lock_token,
-        leaseUntil: lockResp.lease_until,
+        lockToken,
+        leaseUntil,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "编辑失败");

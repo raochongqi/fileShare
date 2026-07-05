@@ -25,6 +25,7 @@ pub struct AppState {
 #[derive(Debug, Deserialize)]
 pub struct PathQuery {
     pub path: Option<String>,
+    pub is_dir: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -111,7 +112,8 @@ pub async fn create_entry(
         (StatusCode::BAD_REQUEST, "缺少 path 参数".to_string()).into_response()
     })?;
 
-    let is_dir = path.ends_with('/');
+    // 优先使用 is_dir 查询参数（前端显式指定），其次通过路径末尾的 / 判断
+    let is_dir = query.is_dir.unwrap_or_else(|| path.ends_with('/'));
 
     let etag = file_ops::create_entry(&state.config.data_dir, &state.pool, &path, is_dir)
         .await

@@ -102,14 +102,15 @@ export default function App() {
   // 编辑文件（申请写锁 → 下载并打开）
   const handleEdit = useCallback(
     async (name: string) => {
-      const token = await lockOps.acquireWrite(
-        fileOps.currentPath === "/" ? `/${name}` : `${fileOps.currentPath}/${name}`,
-      );
-      if (!token) {
+      const filePath =
+        fileOps.currentPath === "/" ? `/${name}` : `${fileOps.currentPath}/${name}`;
+      const lockResp = await lockOps.acquireWrite(filePath);
+      if (!lockResp) {
         alert("无法获取写锁，文件可能正在被其他人编辑");
         return;
       }
-      await fileOps.edit(name);
+      // 传入 lock_token/lease_until，避免 edit 内部重复获取锁
+      await fileOps.edit(name, lockResp.lock_token, lockResp.lease_until);
     },
     [fileOps, lockOps],
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { acquireLock, releaseLock, renewLock, queryLock, type LockInfo } from "../lib/api";
+import { acquireLock, releaseLock, renewLock, queryLock, type LockInfo, type LockAcquireResponse } from "../lib/api";
 
 /** 锁管理 hook */
 export function useLock() {
@@ -10,7 +10,7 @@ export function useLock() {
   const timersRef = useRef<Map<string, number>>(new Map());
 
   // 申请写锁
-  const acquireWrite = useCallback(async (path: string): Promise<string | null> => {
+  const acquireWrite = useCallback(async (path: string): Promise<LockAcquireResponse | null> => {
     try {
       const resp = await acquireLock(path, "write");
       setActiveLocks((prev) => {
@@ -20,14 +20,14 @@ export function useLock() {
       });
       // 启动续租定时器
       startRenewal(path, resp.lock_token, resp.lease_until);
-      return resp.lock_token;
+      return resp;
     } catch {
       return null;
     }
   }, []);
 
   // 申请读锁
-  const acquireRead = useCallback(async (path: string): Promise<string | null> => {
+  const acquireRead = useCallback(async (path: string): Promise<LockAcquireResponse | null> => {
     try {
       const resp = await acquireLock(path, "read");
       setActiveLocks((prev) => {
@@ -36,7 +36,7 @@ export function useLock() {
         return next;
       });
       startRenewal(path, resp.lock_token, resp.lease_until);
-      return resp.lock_token;
+      return resp;
     } catch {
       return null;
     }
