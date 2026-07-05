@@ -14,7 +14,7 @@ function headers(extra?: Record<string, string>): HeadersInit {
 
 export interface DirItem {
   name: string;
-  item_type: "file" | "directory";
+  type: "file" | "directory";
   size: number;
   modified_at: string;
   etag: string;

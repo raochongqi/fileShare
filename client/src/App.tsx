@@ -200,7 +200,7 @@ export default function App() {
             },
           ],
         });
-      } else if (item.item_type === "file") {
+      } else if (item.type === "file") {
         // 文件右键：先单独选中此项
         clearSelection();
         select(item.name, false, false, fileOps.sortedItems);

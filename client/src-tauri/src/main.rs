@@ -49,6 +49,12 @@ async fn open_file_for_edit(
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![open_file_for_edit])
+        .setup(|app| {
+            // 启动时自动打开 DevTools（右键菜单也可 "检查元素"）
+            let window = app.get_window("main").expect("找不到主窗口");
+            window.open_devtools();
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");
 }

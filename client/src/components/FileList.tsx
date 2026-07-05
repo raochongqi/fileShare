@@ -138,14 +138,14 @@ export function FileList({
       <tbody>
         {items.map((item) => {
           // 图标类名与 SVG
-          const iconClass = getFileIconClass(item.name, item.item_type === "directory");
+          const iconClass = getFileIconClass(item.name, item.type === "directory");
           const iconSvg = FILE_ICONS[iconClass] || FILE_ICONS["icon-default"];
 
           // 行样式：选中高亮 + 类型区分
           const rowClassName = [
             "file-row",
             selectedNames.has(item.name) ? "selected" : "",
-            item.item_type,
+            item.type,
           ]
             .filter(Boolean)
             .join(" ");
@@ -156,7 +156,7 @@ export function FileList({
               className={rowClassName}
               onClick={(e) => onSelect(item.name, e.ctrlKey || e.metaKey, e.shiftKey)}
               onDoubleClick={() => {
-                if (item.item_type === "directory") {
+                if (item.type === "directory") {
                   onNavigate(item.name);
                 } else {
                   onEdit(item.name);
@@ -165,13 +165,13 @@ export function FileList({
               onContextMenu={(e) => onContextMenu(e, item)}
               onDragOver={(e) => {
                 // 仅目录行接受拖拽
-                if (item.item_type === "directory") {
+                if (item.type === "directory") {
                   e.preventDefault();
                   onDragOverDir(item.name);
                 }
               }}
               onDragLeave={() => {
-                if (item.item_type === "directory") {
+                if (item.type === "directory") {
                   onDragOverDir(null);
                 }
               }}

@@ -44,8 +44,8 @@ export function useFiles(initialPath = "/") {
 
   // 排序后的列表（目录始终在文件之前，组内按指定字段排序）
   const sortedItems = useMemo(() => {
-    const dirs = items.filter((i) => i.item_type === "directory");
-    const files = items.filter((i) => i.item_type === "file");
+    const dirs = items.filter((i) => i.type === "directory");
+    const files = items.filter((i) => i.type === "file");
 
     const sortFn = (a: DirItem, b: DirItem) => {
       let cmp = 0;

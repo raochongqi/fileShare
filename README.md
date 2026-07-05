@@ -8,18 +8,35 @@
 
 ## 技术栈
 
-- **服务端**：Rust (axum + tokio + SQLite)，编译目标 `aarch64-unknown-linux-musl`，零依赖静态二进制
+- **服务端**：Rust (axum + tokio + SQLite)，编译目标 `aarch64-unknown-linux-gnu`，glibc 2.31 兼容
 - **客户端**：Tauri 1.x + React + TypeScript
+- **CI/CD**：GitHub Actions，arm64 原生构建，Ubuntu 20.04 容器保证 glibc 兼容
 
 ## 功能
 
+### 服务端
 - 目录浏览、文件上传/下载、新建/删除/重命名
 - 租约式读写锁（并发读、独占写）
 - 租约超时自动释放 + 后台清理（10s 间隔）
 - ETag 版本冲突检测（If-Match）
 - SSE 实时文件变更通知
-- inotify 文件关闭检测（自动上传释放锁）
 - 共享密钥 Bearer Token 认证
+- CORS 支持（Tauri custom-protocol origin）
+
+### 客户端
+- 文件管理器级交互体验
+  - 双击进入目录 / 双击文件编辑
+  - 单击选中、Ctrl 多选、Shift 范围选中
+  - 右键上下文菜单（文件/目录/空白区/多选四种场景）
+  - 拖拽上传（拖到窗口或拖到目录项）
+  - 可点击面包屑导航
+  - 文件类型图标（按扩展名区分 10 种类型）
+  - 列头排序（名称/大小/修改时间，目录置顶）
+  - 关键字搜索（防抖 300ms）
+  - 上传进度指示
+- inotify 文件关闭检测（自动上传释放锁）
+- 锁状态实时显示 + 手动释放
+- Ctrl+A 全选、Escape 取消选择
 
 ## 项目结构
 
@@ -29,9 +46,9 @@ server/          # 服务端 (Rust, axum)
 │   ├── lib.rs           # 库根，导出所有公共模块
 │   ├── main.rs          # 入口：加载配置、初始化SQLite、启动服务+锁清理任务
 │   ├── config.rs        # .env 环境变量配置
-│   ├── router.rs        # 路由定义 + 认证中间件
+│   ├── router.rs        # 路由定义 + CORS + 认证中间件
 │   ├── handler/         # HTTP handler
-│   │   ├── auth.rs      # Bearer Token 认证中间件
+│   │   ├── auth.rs      # Bearer Token 认证中间件（跳过 OPTIONS 预检）
 │   │   ├── files.rs     # 文件 CRUD + 搜索
 │   │   ├── lock.rs      # 锁操作（申请/释放/续租/查询）+ SSE广播
 │   │   └── events.rs    # SSE 事件流 (broadcast channel)
@@ -51,33 +68,34 @@ client/          # 客户端 (Tauri + React)
 ├── src/
 │   ├── lib/
 │   │   ├── api.ts              # 服务端 API 封装（14个函数）
+│   │   ├── fileIcons.ts        # 文件类型图标映射（10类扩展名 + SVG）
 │   │   ├── api.test.ts         # API 基础测试（23个）
 │   │   └── api.defensive.test.ts # API 防御性测试（62个）
 │   ├── hooks/
-│   │   ├── useFiles.ts         # 文件列表 + CRUD 操作 hook
+│   │   ├── useFiles.ts         # 文件列表 + CRUD + 排序 + 搜索 + 上传进度
 │   │   ├── useLock.ts          # 锁管理 hook（申请/释放/续租）
 │   │   ├── useSSE.ts           # SSE 事件监听 hook（5s 自动重连）
+│   │   ├── useSelection.ts     # 多选状态管理（单击/Ctrl/Shift/全选）
+│   │   ├── useDragUpload.ts    # 拖拽上传 hook（窗口级拖放监听）
 │   │   └── hooks.test.ts       # Hooks 集成测试（33个）
 │   ├── components/
-│   │   ├── FileList.tsx        # 文件浏览表格
-│   │   ├── FileToolbar.tsx     # 面包屑导航 + 操作按钮
+│   │   ├── FileList.tsx        # 文件浏览表格（双击/选中/排序/右键）
+│   │   ├── FileToolbar.tsx     # 面包屑导航 + 搜索 + 上传进度
+│   │   ├── ContextMenu.tsx     # 右键上下文菜单（四种场景）
+│   │   ├── DragOverlay.tsx     # 拖拽覆盖层
 │   │   ├── LockStatus.tsx      # 活跃锁状态栏
 │   │   ├── ConfirmDialog.tsx   # 删除确认对话框
 │   │   ├── components.test.tsx         # 组件渲染测试（15个）
 │   │   └── components.defensive.test.tsx # 组件交互防御性测试（35个）
-│   ├── App.tsx                 # 主界面（集成 hooks + components）
-│   └── styles.css              # 暗色主题
+│   ├── App.tsx                 # 主界面（集成所有 hooks + 组件 + 快捷键）
+│   └── styles.css              # 暗色主题（图标颜色/菜单/拖拽/进度条）
 ├── src-tauri/
 │   └── src/
 │       ├── main.rs             # Tauri 应用入口（薄壳）
 │       └── lib.rs              # 核心逻辑（下载/上传/续租/inotify）+ 54个单元测试
-scripts/         # 构建脚本
-├── build-server.sh   # 服务端交叉编译（cross + aarch64 musl）
-└── build-client.sh   # 客户端 aarch64 原生构建
-deploy/          # 部署配置
-├── fileshare-server.service  # systemd 服务单元
-└── install-server.sh         # 服务端一键部署脚本
-docs/            # 设计文档
+.github/
+└── workflows/
+    └── build.yml               # GitHub Actions CI（arm64 原生构建）
 ```
 
 ## API 一览
@@ -120,6 +138,18 @@ docs/            # 设计文档
 | 5 | 客户端锁 + inotify + 编辑流程 | ✅ |
 | 6 | 防御性集成测试 | ✅ |
 | 7 | 交叉编译 + 部署 | ✅ |
+| 8 | GitHub Actions CI/CD（arm64 原生构建） | ✅ |
+| 9 | 文件管理器交互升级（右键/拖拽/搜索/排序/图标） | ✅ |
+
+## CI/CD
+
+GitHub Actions 工作流（`.github/workflows/build.yml`）：
+- **Runner**: `ubuntu-24.04-arm`（GitHub 托管 arm64 runner）
+- **容器**: Ubuntu 20.04（保证 glibc 2.31 兼容）
+- **产物**:
+  - `fileshare-server` — 服务端二进制
+  - `file-share_0.1.0_arm64.deb` — 客户端安装包
+- **触发**: push/PR 到 main 分支，或手动触发
 
 ## 测试
 
@@ -159,9 +189,13 @@ npm run tauri dev
 
 ## 部署 (aarch64 银河麒麟)
 
-服务端和客户端均在 aarch64 目标机上原生编译，避免交叉编译依赖问题。
+### 方式一：从 GitHub Release 下载
 
-### 1. 安装构建依赖
+从 Actions 产物页面下载最新构建的二进制。
+
+### 方式二：本地构建
+
+#### 1. 安装构建依赖
 
 ```bash
 # 系统库
@@ -177,29 +211,21 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
 sudo apt-get install -y nodejs
 ```
 
-### 2. 编译服务端
+#### 2. 安装服务端
 
 ```bash
-./scripts/build-server.sh
-# 产物: server/target/release/fileshare-server
-```
-
-### 3. 安装服务端
-
-```bash
-sudo cp server/target/release/fileshare-server /usr/local/bin/
+chmod +x fileshare-server
+sudo cp fileshare-server /usr/local/bin/
 sudo ./deploy/install-server.sh /usr/local/bin/fileshare-server
 sudo vi /etc/fileshare/.env   # 修改 AUTH_TOKEN 和 DATA_DIR
 sudo systemctl restart fileshare-server
 ```
 
-### 4. 编译安装客户端
+#### 3. 安装客户端
 
 ```bash
-./scripts/build-client.sh
-sudo dpkg -i client/src-tauri/target/release/bundle/deb/fileshare_0.1.0_arm64.deb
-cp client/.env.example ~/.config/fileshare/.env
-vi ~/.config/fileshare/.env   # 配置服务端地址和认证密钥
+sudo dpkg -i file-share_0.1.0_arm64.deb
+# 如有依赖缺失：sudo apt-get install -f
 ```
 
 ### 常用运维命令
@@ -213,7 +239,6 @@ journalctl -u fileshare-server -f     # 实时日志
 ## 文档
 
 - [设计文档](docs/superpowers/specs/2026-07-05-fileshare-design.md)
-- [实施计划](.trae/documents/fileshare-implementation-plan.md)
 
 ## 目标环境
 
