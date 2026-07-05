@@ -1,0 +1,68 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 系统依赖（含 Tauri 所需的 GTK/WebKit）
+RUN apt-get update && apt-get install -y \
+    curl build-essential pkg-config \
+    libssl-dev libsqlite3-dev \
+    libwebkit2gtk-4.0-dev libgtk-3-dev \
+    libayatana-appindicator3-dev librsvg2-dev \
+    file python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Rust（stable，aarch64 原生）
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Node.js 20
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# ---- 服务端依赖缓存 ----
+COPY server/Cargo.toml server/Cargo.lock* ./server/
+RUN mkdir -p server/src server/tests && \
+    echo "" > server/src/lib.rs && \
+    echo "fn main(){}" > server/src/main.rs
+WORKDIR /app/server
+RUN cargo build --release 2>/dev/null || true
+
+# ---- 服务端编译 ----
+COPY server/ .
+RUN find src -name "*.rs" -exec touch {} + && cargo build --release
+
+# ---- 客户端 Rust 依赖缓存 ----
+WORKDIR /app
+COPY client/src-tauri/Cargo.toml client/src-tauri/Cargo.lock* ./client/src-tauri/
+RUN mkdir -p client/src-tauri/src && \
+    echo "" > client/src-tauri/src/lib.rs && \
+    echo "fn main(){}" > client/src-tauri/src/main.rs
+WORKDIR /app/client/src-tauri
+RUN cargo build --release 2>/dev/null || true
+
+# ---- 客户端 Rust 编译 ----
+COPY client/src-tauri/ .
+COPY scripts/gen_icons.py /tmp/gen_icons.py
+RUN python3 /tmp/gen_icons.py icons
+RUN find src -name "*.rs" -exec touch {} + && cargo build --release
+
+# ---- 客户端前端 ----
+WORKDIR /app/client
+COPY client/package.json client/package-lock.json* ./
+RUN npm install 2>/dev/null || true
+COPY client/ .
+RUN npm install && npm run build
+
+# ---- Tauri 打包 ----
+WORKDIR /app/client
+RUN npm run tauri build
+
+# ---- 产物汇总 ----
+WORKDIR /app/output
+RUN mkdir -p server client
+RUN cp /app/server/target/release/fileshare-server server/
+RUN cp /app/client/src-tauri/target/release/bundle/deb/*.deb client/ 2>/dev/null || true
+RUN cp /app/client/src-tauri/target/release/fileshare-client client/ 2>/dev/null || true

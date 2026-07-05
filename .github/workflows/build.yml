@@ -1,0 +1,54 @@
+name: Build aarch64
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (aarch64 via QEMU)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.ci
+          platforms: linux/arm64
+          load: true
+          tags: fileshare-build
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract artifacts
+        run: |
+          docker create --name extract fileshare-build
+          docker cp extract:/app/output/ ./output/
+          docker rm extract
+
+      - name: Upload server binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: fileshare-server-aarch64
+          path: output/server/fileshare-server
+
+      - name: Upload client deb package
+        uses: actions/upload-artifact@v4
+        with:
+          name: fileshare-client-aarch64
+          path: |
+            output/client/*.deb
+            output/client/fileshare-client

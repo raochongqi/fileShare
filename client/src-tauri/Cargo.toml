@@ -1,0 +1,21 @@
+[package]
+name = "fileshare-client"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1", features = [] }
+
+[dependencies]
+tauri = { version = "1", features = ["shell-open", "fs-create-dir", "fs-read-file", "fs-write-file", "path-all"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["stream", "multipart", "json"] }
+tokio = { version = "1", features = ["full"] }
+dotenvy = "0.15"
+notify = { version = "7", features = ["macos_kqueue"] }
+open = "5"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tempfile = "3"
+urlencoding = "2"

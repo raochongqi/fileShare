@@ -1,0 +1,290 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface-hover: #1a2744;
+  --border: #2a3a5c;
+  --text: #e0e0e0;
+  --text-dim: #888;
+  --primary: #4a9eff;
+  --primary-hover: #3a8eef;
+  --danger: #e74c3c;
+  --danger-hover: #c0392b;
+  --success: #2ecc71;
+  --warning: #f39c12;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.app-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* 工具栏 */
+.file-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb-path {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-dim);
+}
+
+.breadcrumb-root,
+.breadcrumb-part {
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.breadcrumb-root:hover {
+  background: var(--surface-hover);
+  cursor: pointer;
+}
+
+.breadcrumb-sep {
+  color: var(--text-dim);
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 按钮 */
+button {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+
+button:hover {
+  background: var(--surface-hover);
+  border-color: var(--primary);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-secondary {
+  border-color: var(--border);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+  background: none;
+  border: none;
+}
+
+/* 文件列表 */
+.file-list {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.file-list th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.file-list td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-list tr:hover {
+  background: var(--surface-hover);
+}
+
+.file-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-icon {
+  font-size: 16px;
+}
+
+.file-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.file-actions button {
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
+.file-list-loading,
+.file-list-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-dim);
+}
+
+/* 锁徽章 */
+.lock-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.lock-write {
+  background: rgba(231, 76, 60, 0.2);
+  color: var(--danger);
+}
+
+.lock-read {
+  background: rgba(243, 156, 18, 0.2);
+  color: var(--warning);
+}
+
+.lock-none {
+  color: var(--text-dim);
+}
+
+/* 锁状态栏 */
+.lock-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.lock-status-label {
+  color: var(--text-dim);
+}
+
+.lock-status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(231, 76, 60, 0.15);
+  border-radius: 10px;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.btn-release-lock {
+  padding: 1px 6px;
+  font-size: 11px;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* 错误横幅 */
+.error-banner {
+  padding: 8px 12px;
+  background: rgba(231, 76, 60, 0.15);
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  border-radius: 6px;
+  color: var(--danger);
+  margin-bottom: 12px;
+}
+
+/* 对话框 */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 480px;
+}
+
+.dialog h3 {
+  margin-bottom: 12px;
+}
+
+.dialog p {
+  color: var(--text-dim);
+  margin-bottom: 20px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

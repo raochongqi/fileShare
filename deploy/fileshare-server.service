@@ -1,0 +1,33 @@
+[Unit]
+Description=FileShare LAN File Server
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fileshare
+Group=fileshare
+WorkingDirectory=/var/lib/fileshare
+ExecStart=/usr/local/bin/fileshare-server
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/fileshare
+
+# 环境变量
+EnvironmentFile=/etc/fileshare/.env
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fileshare-server
+
+[Install]
+WantedBy=multi-user.target
