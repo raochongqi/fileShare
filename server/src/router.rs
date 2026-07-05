@@ -24,9 +24,9 @@ pub fn build_router(state: AppState) -> Router {
         // 锁操作
         .route("/api/files/lock", post(lock::acquire_lock).get(lock::query_lock).delete(lock::release_lock))
         .route("/api/files/lock/lease", put(lock::renew_lock))
-        // CORS 层（在认证中间件之前，确保预检请求不被拦截）
-        .layer(cors)
-        // Bearer Token 认证中间件
+        // Bearer Token 认证中间件（后添加→先执行）
         .layer(middleware::from_fn_with_state(config, auth::auth_middleware))
+        // CORS 层（最后添加→最先执行，确保预检请求在被 auth 拦截前处理）
+        .layer(cors)
         .with_state(state)
 }

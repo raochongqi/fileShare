@@ -12,6 +12,11 @@ pub async fn auth_middleware(
     req: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
+    // CORS 预检请求无需认证
+    if req.method() == axum::http::Method::OPTIONS {
+        return Ok(next.run(req).await);
+    }
+
     // SSE 端点允许无认证连接（后续可通过 query 参数验证）
     let path = req.uri().path();
     if path == "/api/events" {
