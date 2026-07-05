@@ -1,4 +1,4 @@
-name: Build aarch64
+name: Build arm64
 
 on:
   push:
@@ -12,43 +12,70 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04-arm64
+    container:
+      image: ubuntu:20.04
+      options: --user root
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build (aarch64 via QEMU)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile.ci
-          platforms: linux/arm64
-          load: true
-          tags: fileshare-build
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Extract artifacts
+      - name: Install system dependencies
         run: |
-          docker create --name extract fileshare-build
-          docker cp extract:/app/output/ ./output/
-          docker rm extract
+          apt-get update
+          apt-get install -y \
+            curl build-essential pkg-config \
+            libssl-dev libsqlite3-dev \
+            libwebkit2gtk-4.0-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev \
+            file python3 git
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Install Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        shell: bash
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            server/target
+            client/src-tauri/target
+          key: arm64-${{ hashFiles('server/Cargo.lock', 'client/src-tauri/Cargo.lock') }}
+          restore-keys: arm64-
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: client/node_modules
+          key: npm-${{ hashFiles('client/package-lock.json') }}
+          restore-keys: npm-
+
+      - name: Build server
+        run: |
+          source ~/.cargo/env
+          cd server && cargo build --release
+        shell: bash
+
+      - name: Install frontend dependencies
+        run: cd client && npm install
+        shell: bash
+
+      - name: Build client
+        run: cd client && npm run tauri build
+        shell: bash
 
       - name: Upload server binary
         uses: actions/upload-artifact@v4
         with:
-          name: fileshare-server-aarch64
-          path: output/server/fileshare-server
+          name: fileshare-server-arm64
+          path: server/target/release/fileshare-server
 
-      - name: Upload client deb package
+      - name: Upload client deb
         uses: actions/upload-artifact@v4
         with:
-          name: fileshare-client-aarch64
-          path: |
-            output/client/*.deb
-            output/client/fileshare-client
+          name: fileshare-client-arm64
+          path: client/src-tauri/target/release/bundle/deb/*.deb
