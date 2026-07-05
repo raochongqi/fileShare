@@ -21,15 +21,16 @@ jobs:
 
       - name: Install system dependencies
         run: |
+          export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y \
+          apt-get install -y --no-install-recommends \
             curl build-essential pkg-config \
             libssl-dev libsqlite3-dev \
             libwebkit2gtk-4.0-dev libgtk-3-dev \
             libayatana-appindicator3-dev librsvg2-dev \
-            file python3 git
+            file python3 git ca-certificates
           curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs
+          apt-get install -y --no-install-recommends nodejs
           rm -rf /var/lib/apt/lists/*
 
       - name: Install Rust
