@@ -133,9 +133,9 @@ export function useFiles(initialPath = "/") {
     }
   }, [currentPath, load]);
 
-  // 新建目录
+  // 新建目录（路径末尾加 / 让服务端识别为目录）
   const createDir = useCallback(async (name: string) => {
-    const dirPath = currentPath === "/" ? `/${name}` : `${currentPath}/${name}`;
+    const dirPath = currentPath === "/" ? `/${name}/` : `${currentPath}/${name}/`;
     await createEntry(dirPath, true);
     await load();
   }, [currentPath, load]);
